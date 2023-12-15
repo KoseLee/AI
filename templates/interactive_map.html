@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    
+    <!-- Add custom styles for the buttons -->
+    <style>
+        #clearPathButton
+        {
+            background-color: #4CAF50; /* Màu nền của nút */
+            color: white; /* Màu chữ trên nút */
+            border: none; /* Bỏ viền nút */
+            padding: 10px 20px; /* Kích thước lề trong nút */
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            width: 100px;
+            border-radius: 5px; /* Độ cong của góc nút */
+            position: absolute;
+            top: 15px;
+            right: 10px;
+            z-index: 1000; /* Đảm bảo nó ở trên cùng */
+        }
+        #resetButton {
+            background-color: #4CAF50; /* Màu nền của nút */
+            color: white; /* Màu chữ trên nút */
+            border: none; /* Bỏ viền nút */
+            padding: 10px 20px; /* Kích thước lề trong nút */
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            width: 100px;
+            border-radius: 5px; /* Độ cong của góc nút */
+            position: absolute;
+            top: 80px;
+            right: 10px;
+            z-index: 1000;
+        }
+
+        #clearPathButton:hover,
+        #resetButton:hover {
+            background-color: #45a049; /* Màu nền của nút khi di chuột qua */
+        }
+        .text-label {
+        background-color: #4CAF50; /* Màu nền của label */
+        color: white; /* Màu chữ trên label */
+        position: absolute;
+        top: 20px;
+        left: 60px;
+        z-index: 1000;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        padding: 10px; /* Thêm padding để tạo khoảng trắng xung quanh nội dung */
+        border-radius: 5px; /* Bo tròn các góc của label */
+}
+
+    </style>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="coordinatesDisplay">
+        <span id="startCoordinatesLabel"></span>
+        <span id="endCoordinatesLabel"></span>
+    </div>
+    <div class="text-label">Bản đồ phường Lê Đại Hành</div>
+   
+<div id="map" style="height: 100vh;"></div>
+
+<!-- Add a Clear Path button -->
+<button id="clearPathButton">Refresh (F5)</button>
+
+<!-- Add a Reset button -->
+<button id="resetButton">Reset Map</button>
+<script>
+    
+var startCoordinates = null;
+var endCoordinates = null;
+var map = L.map('map').setView([21.01117, 105.84853], 16);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// Coordinates defining the boundary of the area
+var boundaryCoordinates = [
+    [21.011755, 105.8512497],
+    [21.0118394, 105.8496033],
+    [21.0120276, 105.8496091],
+    [21.0121537, 105.8495408],
+    [21.0128166, 105.8495225],
+    [21.0130803, 105.8495299],
+    [21.0137236, 105.8495061],
+    [21.0147725, 105.8495296],
+    [21.0147685, 105.8492004],
+    [21.0151749, 105.8492126],
+    [21.0151854, 105.8488537],
+    [21.0147667, 105.8488402],
+    [21.0148227, 105.8482914],
+    [21.0148615, 105.8479095],
+    [21.0149594, 105.8479194],
+    [21.0149899, 105.8477815],
+    [21.0148685, 105.8477659],
+    [21.0150146, 105.8471832],
+    [21.0170479, 105.8478165],
+    [21.0174236, 105.8428726],
+    [21.0160923, 105.8427582],
+    [21.0161013, 105.8413478],
+    [21.0152643, 105.8413205],
+    [21.0137848, 105.841298],
+    [21.0076852, 105.8413643],
+    [21.0077223, 105.8430519],
+    [21.0085005, 105.8489781],
+    [21.0087547, 105.8510361],
+    [21.011755, 105.8512497]
+];
+
+// Vẽ biên giới
+L.polygon(boundaryCoordinates, { color: 'red', fill:false }).addTo(map);
+// Hàm xử lý sự kiện click chuột trên bản đồ
+var markers = L.layerGroup().addTo(map);
+
+// Hàm xử lý sự kiện click trên bản đồ
+function onMapClick(e) {
+    if (!startCoordinates) {
+        startCoordinates = [e.latlng.lat, e.latlng.lng];
+        var startMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(markers);
+        startMarker.bindPopup('Điểm bắt đầu').openPopup();
+    } else if (!endCoordinates) {
+        endCoordinates = [e.latlng.lat, e.latlng.lng];
+        var endMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(markers);
+        endMarker.bindPopup('Điểm kết thúc').openPopup();
+        sendDataToServer();
+    }
+}
+
+
+map.on('click', onMapClick);
+
+// Hàm gửi tọa độ về server Flask
+// Hàm gửi tọa độ về server Flask
+function sendDataToServer() {
+    console.log('Sending data to server:', { start: startCoordinates, end: endCoordinates });
+    fetch('/get_coordinates', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ start: startCoordinates, end: endCoordinates }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Xử lý kết quả từ server (ở đây có thể vẽ đường đi trên bản đồ)
+        drawPathOnMap(data.path);
+    })
+    .catch(error => {
+        console.error('Lỗi:', error);
+    });
+}
+
+
+// Hàm vẽ đường đi trên bản đồ
+function drawPathOnMap(pathCoordinates) {
+    console.log('Received path coordinates:', pathCoordinates);
+
+    
+    map.eachLayer(layer => {
+        if (layer instanceof L.Marker && pathCoordinates.includes(layer.getLatLng())) {
+            map.removeLayer(layer);
+        }
+    });
+
+    // Vẽ đường đi
+    L.polyline(pathCoordinates, { color: 'blue' }).addTo(map);
+
+    // Đặt Marker cho mỗi điểm trên đường đi (excluding the path points)
+    pathCoordinates.forEach(coord => {
+        if (!startCoordinates || !endCoordinates || coord !== startCoordinates || coord !== endCoordinates) {
+            L.marker(coord, { icon: L.divIcon({ className: 'custom-div-icon' }) }).addTo(map);
+        }
+    });
+}
+
+document.getElementById('resetButton').addEventListener('click', function() {
+    // Reset 
+    startCoordinates = null;
+    endCoordinates = null;
+    markers.clearLayers();
+    // xóa đường đi 
+    map.eachLayer(layer => {
+        if (layer instanceof L.Polyline && layer.options.color === 'blue') {
+            map.removeLayer(layer);
+        }
+    });
+});
+
+document.getElementById('clearPathButton').addEventListener('click', function () {
+    // Reset 
+    startCoordinates = null;
+    endCoordinates = null;
+    // Load lại trang từ máy chủ
+    location.reload(true);
+});
+
+</script>
+
+</body>
+</html>
